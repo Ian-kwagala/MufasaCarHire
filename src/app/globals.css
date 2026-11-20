@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+/*
+ * Mufasa Car Hire Brand Design System
+ * Navy: #0E2444 (executive headers, primary text, dark banners)
+ * Gold: #C59B3B (primary CTA pill buttons, highlights, badges)
+ * White: #FFFFFF (clean backgrounds)
+ */
+@theme {
+  --color-navy: #0E2444;
+  --color-navy-light: #163460;
+  --color-navy-dark: #09182E;
+  --color-gold: #C59B3B;
+  --color-gold-hover: #B0882C;
+  --color-gold-soft: #FDF8EC;
+  --color-slate-bg: #F8FAFC;
+}
+
+/* Smooth scrolling and crisp typography across mobile and desktop */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #ffffff;
+  color: #0e2444;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Primary Gold Pill Button matching Mufasa Car Hire brand guidelines */
+.btn-gold {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: #c59b3b;
+  color: #0e2444;
+  font-weight: 700;
+  border-radius: 9999px;
+  padding: 0.75rem 1.5rem;
+  transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-gold:hover {
+  background-color: #b0882c;
+  box-shadow: 0 4px 14px rgba(197, 155, 59, 0.35);
+}
+
+.btn-gold:active {
+  transform: scale(0.98);
+}
+
+/* Secondary Navy Outline Pill Button */
+.btn-navy-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: transparent;
+  color: #0e2444;
+  border: 2px solid #0e2444;
+  font-weight: 700;
+  border-radius: 9999px;
+  padding: 0.7rem 1.5rem;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-navy-outline:hover {
+  background-color: #0e2444;
+  color: #ffffff;
+}
