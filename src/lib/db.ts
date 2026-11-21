@@ -43,6 +43,23 @@ function getDbInstance(): DatabaseSync {
   return globalForDb.__mufasaDb;
 }
 
+/**
+ * Node's built-in node:sqlite returns row objects with a null prototype,
+ * which React Server Components cannot serialize when passing props to
+ * Client Components. Spreading into a fresh object restores Object.prototype.
+ */
+function toPlainRow<T>(row: unknown): T {
+  return { ...(row as Record<string, unknown>) } as T;
+}
+
+function toPlainRowOrNull<T>(row: unknown): T | null {
+  return row ? ({ ...(row as Record<string, unknown>) } as T) : null;
+}
+
+function toPlainRows<T>(rows: unknown[]): T[] {
+  return rows.map((row) => ({ ...(row as Record<string, unknown>) }) as T);
+}
+
 const DEFAULT_SETTINGS: SiteSettings = {
   company_name: "Mufasa Car Hire",
   slogan: "Travel Like a KING",
@@ -475,7 +492,7 @@ export function getVehicles(options?: { activeOnly?: boolean }): Vehicle[] {
   const sql = options?.activeOnly
     ? "SELECT * FROM vehicles WHERE active = 1 ORDER BY sort_order ASC, id ASC"
     : "SELECT * FROM vehicles ORDER BY sort_order ASC, id ASC";
-  return db.prepare(sql).all() as unknown as Vehicle[];
+  return toPlainRows<Vehicle>(db.prepare(sql).all());
 }
 
 export function upsertVehicle(
@@ -509,7 +526,9 @@ export function upsertVehicle(
       data.sort_order ?? 10,
       data.id
     );
-    return db.prepare("SELECT * FROM vehicles WHERE id = ?").get(data.id) as unknown as Vehicle;
+    return toPlainRow<Vehicle>(
+      db.prepare("SELECT * FROM vehicles WHERE id = ?").get(data.id)
+    );
   }
 
   const info = db
@@ -538,9 +557,11 @@ export function upsertVehicle(
       data.active ?? 1,
       data.sort_order ?? 10
     );
-  return db
-    .prepare("SELECT * FROM vehicles WHERE id = ?")
-    .get(Number(info.lastInsertRowid)) as unknown as Vehicle;
+  return toPlainRow<Vehicle>(
+    db
+      .prepare("SELECT * FROM vehicles WHERE id = ?")
+      .get(Number(info.lastInsertRowid))
+  );
 }
 
 export function deleteVehicle(id: number): void {
@@ -557,7 +578,7 @@ export function getPackages(options?: { activeOnly?: boolean }): PackageItem[] {
   const sql = options?.activeOnly
     ? "SELECT * FROM packages WHERE active = 1 ORDER BY sort_order ASC, id ASC"
     : "SELECT * FROM packages ORDER BY sort_order ASC, id ASC";
-  return db.prepare(sql).all() as unknown as PackageItem[];
+  return toPlainRows<PackageItem>(db.prepare(sql).all());
 }
 
 export function upsertPackage(
@@ -577,7 +598,9 @@ export function upsertPackage(
       data.sort_order ?? 10,
       data.id
     );
-    return db.prepare("SELECT * FROM packages WHERE id = ?").get(data.id) as unknown as PackageItem;
+    return toPlainRow<PackageItem>(
+      db.prepare("SELECT * FROM packages WHERE id = ?").get(data.id)
+    );
   }
   const info = db
     .prepare(
@@ -591,9 +614,11 @@ export function upsertPackage(
       data.active ?? 1,
       data.sort_order ?? 10
     );
-  return db
-    .prepare("SELECT * FROM packages WHERE id = ?")
-    .get(Number(info.lastInsertRowid)) as unknown as PackageItem;
+  return toPlainRow<PackageItem>(
+    db
+      .prepare("SELECT * FROM packages WHERE id = ?")
+      .get(Number(info.lastInsertRowid))
+  );
 }
 
 export function deletePackage(id: number): void {
@@ -610,7 +635,7 @@ export function getReviews(options?: { activeOnly?: boolean }): Review[] {
   const sql = options?.activeOnly
     ? "SELECT * FROM reviews WHERE active = 1 ORDER BY id DESC"
     : "SELECT * FROM reviews ORDER BY id DESC";
-  return db.prepare(sql).all() as unknown as Review[];
+  return toPlainRows<Review>(db.prepare(sql).all());
 }
 
 export function upsertReview(data: Partial<Review> & { id?: number }): Review {
@@ -626,7 +651,9 @@ export function upsertReview(data: Partial<Review> & { id?: number }): Review {
       data.active ?? 1,
       data.id
     );
-    return db.prepare("SELECT * FROM reviews WHERE id = ?").get(data.id) as unknown as Review;
+    return toPlainRow<Review>(
+      db.prepare("SELECT * FROM reviews WHERE id = ?").get(data.id)
+    );
   }
   const info = db
     .prepare(
@@ -639,9 +666,11 @@ export function upsertReview(data: Partial<Review> & { id?: number }): Review {
       data.quote ?? "",
       data.active ?? 1
     );
-  return db
-    .prepare("SELECT * FROM reviews WHERE id = ?")
-    .get(Number(info.lastInsertRowid)) as unknown as Review;
+  return toPlainRow<Review>(
+    db
+      .prepare("SELECT * FROM reviews WHERE id = ?")
+      .get(Number(info.lastInsertRowid))
+  );
 }
 
 export function deleteReview(id: number): void {
@@ -720,9 +749,11 @@ export function createBooking(input: Partial<Booking>): Booking {
       input.admin_notes ?? ""
     );
 
-  return db
-    .prepare("SELECT * FROM bookings WHERE id = ?")
-    .get(Number(info.lastInsertRowid)) as unknown as Booking;
+  return toPlainRow<Booking>(
+    db
+      .prepare("SELECT * FROM bookings WHERE id = ?")
+      .get(Number(info.lastInsertRowid))
+  );
 }
 
 export function getBookings(filters?: {
@@ -751,9 +782,9 @@ export function getBookings(filters?: {
   }
 
   const where = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
-  return db
-    .prepare(`SELECT * FROM bookings ${where} ORDER BY id DESC`)
-    .all(...params) as unknown as Booking[];
+  return toPlainRows<Booking>(
+    db.prepare(`SELECT * FROM bookings ${where} ORDER BY id DESC`).all(...params)
+  );
 }
 
 export function updateBooking(
@@ -806,7 +837,9 @@ export function updateBooking(
     id
   );
 
-  return db.prepare("SELECT * FROM bookings WHERE id = ?").get(id) as unknown as Booking;
+  return toPlainRowOrNull<Booking>(
+    db.prepare("SELECT * FROM bookings WHERE id = ?").get(id)
+  );
 }
 
 export function deleteBooking(id: number): void {
@@ -827,7 +860,12 @@ export function getAdminUserByUsername(
     .get(username) as
     | { id: number; username: string; password_hash: string; role: string }
     | undefined;
-  return row ?? null;
+  return toPlainRowOrNull<{
+    id: number;
+    username: string;
+    password_hash: string;
+    role: string;
+  }>(row);
 }
 
 export function updateAdminPassword(username: string, newPassword: string): void {
