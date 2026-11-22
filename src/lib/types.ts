@@ -47,6 +47,7 @@ export interface Vehicle {
   filter_group: FleetFilterGroup;
   fleet_type: string; // e.g., "OWNED", "PARTNER", "PARTNER / VIP"
   drive_option: DriveOptionType;
+  transmission: string;
   seats: string;
   ac: number; // 1 = yes, 0 = no
   luggage: string;
@@ -55,6 +56,7 @@ export interface Vehicle {
   rate_ugx: number | null;
   is_quote_only: number; // 1 = quote button, 0 = fixed price
   image_url: string;
+  video_url: string;
   featured: number; // 1 = shown on home page
   active: number; // 1 = visible on website
   sort_order: number;

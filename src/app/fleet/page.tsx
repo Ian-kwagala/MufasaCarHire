@@ -1,11 +1,20 @@
-import React from "react";
-import { Gift, Sparkles } from "lucide-react";
+import React, { Suspense } from "react";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { Box, Gift, Sparkles } from "lucide-react";
 import { getSiteSettings, getVehicles } from "@/lib/db";
 import { TrustBar } from "@/components/TrustBar";
 import { FleetExplorer } from "@/components/FleetExplorer";
 import { SelfDriveBox } from "@/components/SelfDriveBox";
+import { FleetExplorerSkeleton } from "@/components/Skeletons";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Kampala Car Hire Fleet & Self-Drive Catalog",
+  description:
+    "Browse GPS-tracked, insured Kampala car hire vehicles: Toyota Premio, Fielder, Wish, Noah, Land Cruiser SUVs, HiAce vans, Coaster buses & cargo trucks.",
+};
 
 export default async function FleetPage({
   searchParams,
@@ -21,17 +30,27 @@ export default async function FleetPage({
     <div>
       {/* Page Header */}
       <section className="bg-navy py-12 text-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <span className="text-xs font-extrabold uppercase tracking-widest text-gold">
-            Company-Owned + Vetted Partner Network
-          </span>
-          <h1 className="mt-2 text-3xl font-extrabold sm:text-4xl">
-            Fleet &amp; Car Hire Catalog
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm text-white/80 sm:text-base">
-            Pick your exact vehicle — from daily Toyota Premio saloons and 7-seater MPVs
-            to executive Land Cruisers, Coaster buses, and 1–5 tonne cargo trucks.
-          </p>
+        <div className="mx-auto flex max-w-7xl flex-wrap items-end justify-between gap-6 px-4 sm:px-6 lg:px-8">
+          <div>
+            <span className="text-xs font-extrabold uppercase tracking-widest text-gold">
+              Company-Owned + Vetted Partner Network
+            </span>
+            <h1 className="mt-2 text-3xl font-extrabold sm:text-4xl">
+              Fleet &amp; Car Hire Catalog
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm text-white/80 sm:text-base">
+              Pick your exact vehicle — from daily Toyota Premio saloons and 7-seater MPVs
+              to executive Land Cruisers, Coaster buses, and 1–5 tonne cargo trucks.
+            </p>
+          </div>
+
+          <Link
+            href="/showroom-3d"
+            className="inline-flex items-center gap-2 rounded-full border border-gold/45 bg-white/5 px-5 py-2.5 text-sm font-bold text-gold transition-colors hover:bg-gold hover:text-navy"
+          >
+            <Box className="h-4 w-4" />
+            <span>Open 3D Showroom</span>
+          </Link>
         </div>
       </section>
 
@@ -73,11 +92,13 @@ export default async function FleetPage({
         </div>
 
         {/* Interactive Fleet Filter & Cards */}
-        <FleetExplorer
-          vehicles={vehicles}
-          settings={settings}
-          initialVehicleId={initialVehicleId}
-        />
+        <Suspense fallback={<FleetExplorerSkeleton cardCount={6} />}>
+          <FleetExplorer
+            vehicles={vehicles}
+            settings={settings}
+            initialVehicleId={initialVehicleId}
+          />
+        </Suspense>
 
         {/* Required Self-Drive Checklist */}
         <SelfDriveBox

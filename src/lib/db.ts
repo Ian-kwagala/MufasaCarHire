@@ -109,6 +109,7 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
       filter_group TEXT NOT NULL,
       fleet_type TEXT NOT NULL,
       drive_option TEXT NOT NULL,
+      transmission TEXT NOT NULL DEFAULT 'Automatic',
       seats TEXT NOT NULL,
       ac INTEGER NOT NULL DEFAULT 1,
       luggage TEXT NOT NULL,
@@ -117,6 +118,7 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
       rate_ugx INTEGER,
       is_quote_only INTEGER NOT NULL DEFAULT 0,
       image_url TEXT NOT NULL DEFAULT '',
+      video_url TEXT NOT NULL DEFAULT '',
       featured INTEGER NOT NULL DEFAULT 0,
       active INTEGER NOT NULL DEFAULT 1,
       sort_order INTEGER NOT NULL DEFAULT 0
@@ -207,6 +209,19 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
     ).run("admin", hashPassword(defaultPassword));
   }
 
+  // Ensure video_url and transmission columns exist on pre-existing databases
+  const vehicleColumns = db
+    .prepare("PRAGMA table_info(vehicles)")
+    .all() as Array<{ name: string }>;
+  if (!vehicleColumns.some((col) => col.name === "video_url")) {
+    db.exec("ALTER TABLE vehicles ADD COLUMN video_url TEXT NOT NULL DEFAULT '';");
+  }
+  if (!vehicleColumns.some((col) => col.name === "transmission")) {
+    db.exec(
+      "ALTER TABLE vehicles ADD COLUMN transmission TEXT NOT NULL DEFAULT '';"
+    );
+  }
+
   // Seed vehicles from Master Brief Page 2 if table is empty
   const vehicleCount = db
     .prepare("SELECT COUNT(*) as count FROM vehicles")
@@ -214,10 +229,10 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
   if (vehicleCount.count === 0) {
     const insertVehicle = db.prepare(`
       INSERT INTO vehicles (
-        name, category, filter_group, fleet_type, drive_option,
+        name, category, filter_group, fleet_type, drive_option, transmission,
         seats, ac, luggage, best_uses, price_display, rate_ugx,
-        is_quote_only, image_url, featured, active, sort_order
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+        is_quote_only, image_url, video_url, featured, active, sort_order
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
     `);
 
     const seedVehicles = [
@@ -227,6 +242,7 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
         "saloons_mpvs",
         "OWNED",
         "DRIVER_OR_SELF",
+        "Automatic",
         "4 Passengers",
         1,
         "3 Suitcases",
@@ -234,7 +250,8 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
         "UGX 120,000 / day",
         120000,
         0,
-        "",
+        "/fleet/premio.jpg",
+        "/videos/premio.mp4",
         1,
         1,
       ],
@@ -244,6 +261,7 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
         "saloons_mpvs",
         "OWNED",
         "DRIVER_OR_SELF",
+        "Automatic",
         "7 Passengers",
         1,
         "5 Suitcases",
@@ -251,7 +269,8 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
         "From UGX 160,000 / day",
         160000,
         0,
-        "",
+        "/fleet/wish.jpg",
+        "/videos/wish.mp4",
         1,
         2,
       ],
@@ -261,6 +280,7 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
         "suvs_buses",
         "PARTNER / VIP",
         "DRIVER_OR_REQUEST_SELF",
+        "Automatic (4x4)",
         "5–7 Passengers",
         1,
         "5+ Suitcases",
@@ -268,7 +288,8 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
         "Get Instant Quote",
         null,
         1,
-        "",
+        "/fleet/land-cruiser.jpg",
+        "/videos/land-cruiser.mp4",
         1,
         3,
       ],
@@ -278,6 +299,7 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
         "suvs_buses",
         "PARTNER",
         "DRIVER_ONLY",
+        "Manual / Automatic",
         "14 Passengers",
         1,
         "Group Luggage",
@@ -285,7 +307,8 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
         "Get Instant Quote",
         null,
         1,
-        "",
+        "/fleet/hiace.jpg",
+        "/videos/hiace.mp4",
         0,
         4,
       ],
@@ -295,6 +318,7 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
         "suvs_buses",
         "PARTNER",
         "DRIVER_ONLY",
+        "Manual (Commercial)",
         "28–30 Passengers",
         1,
         "Overhead + Boot",
@@ -302,7 +326,8 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
         "Get Instant Quote",
         null,
         1,
-        "",
+        "/fleet/coaster.jpg",
+        "/videos/coaster.mp4",
         0,
         5,
       ],
@@ -312,6 +337,7 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
         "moving_cargo",
         "PARTNER (5–8)",
         "DRIVER_ONLY",
+        "Manual (Commercial)",
         "2 + Cargo Bay",
         0,
         "1–3 Tonnes",
@@ -319,7 +345,8 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
         "Get Quote (Ref avg: UGX 350k)",
         350000,
         1,
-        "",
+        "/fleet/cargo-van.jpg",
+        "/videos/cargo-van.mp4",
         1,
         6,
       ],
@@ -329,6 +356,7 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
         "moving_cargo",
         "PARTNER (5–8)",
         "DRIVER_ONLY",
+        "Manual (Heavy Duty)",
         "3 + Box Cargo",
         0,
         "3–5+ Tonnes",
@@ -336,7 +364,8 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
         "Get Instant Quote",
         null,
         1,
-        "",
+        "/fleet/fuso-truck.jpg",
+        "/videos/fuso-truck.mp4",
         0,
         7,
       ],
@@ -345,6 +374,74 @@ function initializeSchemaAndSeed(db: DatabaseSync): void {
     for (const v of seedVehicles) {
       insertVehicle.run(...(v as (string | number | null)[]));
     }
+  } else {
+    // Backfill default showcase photos, videos & transmission on existing seeded vehicles if blank
+    const mediaDefaults: Array<{
+      match: string;
+      image: string;
+      video: string;
+      transmission: string;
+    }> = [
+      {
+        match: "%Premio%",
+        image: "/fleet/premio.jpg",
+        video: "/videos/premio.mp4",
+        transmission: "Automatic",
+      },
+      {
+        match: "%Wish%",
+        image: "/fleet/wish.jpg",
+        video: "/videos/wish.mp4",
+        transmission: "Automatic",
+      },
+      {
+        match: "%Land Cruiser%",
+        image: "/fleet/land-cruiser.jpg",
+        video: "/videos/land-cruiser.mp4",
+        transmission: "Automatic (4x4)",
+      },
+      {
+        match: "%HiAce%",
+        image: "/fleet/hiace.jpg",
+        video: "/videos/hiace.mp4",
+        transmission: "Manual / Automatic",
+      },
+      {
+        match: "%Coaster%",
+        image: "/fleet/coaster.jpg",
+        video: "/videos/coaster.mp4",
+        transmission: "Manual (Commercial)",
+      },
+      {
+        match: "%Cargo Vans%",
+        image: "/fleet/cargo-van.jpg",
+        video: "/videos/cargo-van.mp4",
+        transmission: "Manual (Commercial)",
+      },
+      {
+        match: "%Fuso%",
+        image: "/fleet/fuso-truck.jpg",
+        video: "/videos/fuso-truck.mp4",
+        transmission: "Manual (Heavy Duty)",
+      },
+    ];
+    const backfillImage = db.prepare(
+      "UPDATE vehicles SET image_url = ? WHERE name LIKE ? AND (image_url IS NULL OR image_url = '')"
+    );
+    const backfillVideo = db.prepare(
+      "UPDATE vehicles SET video_url = ? WHERE name LIKE ? AND (video_url IS NULL OR video_url = '')"
+    );
+    const backfillTransmission = db.prepare(
+      "UPDATE vehicles SET transmission = ? WHERE name LIKE ? AND (transmission IS NULL OR transmission = '')"
+    );
+    for (const item of mediaDefaults) {
+      backfillImage.run(item.image, item.match);
+      backfillVideo.run(item.video, item.match);
+      backfillTransmission.run(item.transmission, item.match);
+    }
+    db.prepare(
+      "UPDATE vehicles SET transmission = 'Automatic' WHERE transmission IS NULL OR transmission = ''"
+    ).run();
   }
 
   // Seed pricing packages from Master Brief Page 3 if table is empty
@@ -503,9 +600,9 @@ export function upsertVehicle(
     db.prepare(`
       UPDATE vehicles SET
         name = ?, category = ?, filter_group = ?, fleet_type = ?,
-        drive_option = ?, seats = ?, ac = ?, luggage = ?, best_uses = ?,
+        drive_option = ?, transmission = ?, seats = ?, ac = ?, luggage = ?, best_uses = ?,
         price_display = ?, rate_ugx = ?, is_quote_only = ?, image_url = ?,
-        featured = ?, active = ?, sort_order = ?
+        video_url = ?, featured = ?, active = ?, sort_order = ?
       WHERE id = ?
     `).run(
       data.name ?? "",
@@ -513,6 +610,7 @@ export function upsertVehicle(
       data.filter_group ?? "saloons_mpvs",
       data.fleet_type ?? "OWNED",
       data.drive_option ?? "DRIVER_OR_SELF",
+      data.transmission ?? "Automatic",
       data.seats ?? "",
       data.ac ?? 1,
       data.luggage ?? "",
@@ -521,6 +619,7 @@ export function upsertVehicle(
       data.rate_ugx ?? null,
       data.is_quote_only ?? 0,
       data.image_url ?? "",
+      data.video_url ?? "",
       data.featured ?? 0,
       data.active ?? 1,
       data.sort_order ?? 10,
@@ -534,10 +633,10 @@ export function upsertVehicle(
   const info = db
     .prepare(`
       INSERT INTO vehicles (
-        name, category, filter_group, fleet_type, drive_option,
+        name, category, filter_group, fleet_type, drive_option, transmission,
         seats, ac, luggage, best_uses, price_display, rate_ugx,
-        is_quote_only, image_url, featured, active, sort_order
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        is_quote_only, image_url, video_url, featured, active, sort_order
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     .run(
       data.name ?? "New Vehicle",
@@ -545,6 +644,7 @@ export function upsertVehicle(
       data.filter_group ?? "saloons_mpvs",
       data.fleet_type ?? "OWNED",
       data.drive_option ?? "DRIVER_OR_SELF",
+      data.transmission ?? "Automatic",
       data.seats ?? "4 Passengers",
       data.ac ?? 1,
       data.luggage ?? "3 Suitcases",
@@ -553,6 +653,7 @@ export function upsertVehicle(
       data.rate_ugx ?? null,
       data.is_quote_only ?? 0,
       data.image_url ?? "",
+      data.video_url ?? "",
       data.featured ?? 0,
       data.active ?? 1,
       data.sort_order ?? 10
